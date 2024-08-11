@@ -54,7 +54,7 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Plan
-        run: terraform plan -var="all_findings=true" -no-color -out=tfplan
+        run: terraform plan -no-color -out=tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Apply
@@ -71,14 +71,6 @@ jobs:
         run: |
           pip install --upgrade pip setuptools wheel
           pip install c7n c7n-mailer
-
-      - name: Set up c7n-mailer config
-        run: |
-          echo "queue_url: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue" > mailer.yaml
-          echo "role: arn:aws:iam::123523539192:role/diraht-sadcloud-cloud-custodian-role" >> mailer.yaml
-          echo "region: us-east-1" >> mailer.yaml
-          echo "from_address: diamond_dog@cosmic.cloud" >> mailer.yaml
-          echo "slack_webhook: https://hooks.slack.com/services/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" >> mailer.yaml
 
       - name: Update c7n-mailer Lambda
         run: c7n-mailer --config mailer.yaml --update-lambda

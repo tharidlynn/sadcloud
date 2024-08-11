@@ -1,0 +1,97 @@
+{
+  "policy": {
+    "name": "check-s3-bucket-policy",
+    "resource": "s3",
+    "description": "Check for S3 buckets with public access in their policy",
+    "filters": [
+      {
+        "type": "has-statement",
+        "statements": [
+          {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:*"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "type": "remove-statements",
+        "statement_ids": [
+          "PublicAccess"
+        ]
+      },
+      {
+        "type": "notify",
+        "slack_template": "slack_default",
+        "slack_msg_color": "warning",
+        "violation_desc": "S3 bucket had a public access policy which has been removed.",
+        "action_desc": "Cloud Custodian automatically removed the public access policy.",
+        "to": [
+          "https://hooks.slack.com/services/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"
+        ],
+        "transport": {
+          "type": "sqs",
+          "queue": "https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue"
+        }
+      }
+    ]
+  },
+  "version": "0.9.40",
+  "execution": {
+    "id": "e168c0c6-8ee2-4599-9b10-7e9d3b6108dc",
+    "start": 1723379007.201962,
+    "end_time": 1723379007.203027,
+    "duration": 0.0010650157928466797
+  },
+  "config": {
+    "region": "us-east-1",
+    "regions": [
+      "us-east-1"
+    ],
+    "cache": "~/.cache/cloud-custodian.cache",
+    "profile": null,
+    "account_id": "123523539192",
+    "assume_role": null,
+    "session_policy": null,
+    "external_id": null,
+    "log_group": null,
+    "tracer": null,
+    "metrics_enabled": null,
+    "metrics": null,
+    "output_dir": ".",
+    "cache_period": 15,
+    "dryrun": false,
+    "authorization_file": null,
+    "subparser": "run",
+    "config": null,
+    "configs": [
+      "custodian-policies.yaml"
+    ],
+    "policy_filters": [],
+    "resource_types": [],
+    "verbose": null,
+    "quiet": null,
+    "debug": false,
+    "skip_validation": false,
+    "command": "c7n.commands.run",
+    "vars": null
+  },
+  "sys-stats": {},
+  "api-stats": {},
+  "metrics": [
+    {
+      "MetricName": "ResourceCount",
+      "Timestamp": "2024-08-11T19:23:27.202828",
+      "Value": 0,
+      "Unit": "Count"
+    },
+    {
+      "MetricName": "ResourceTime",
+      "Timestamp": "2024-08-11T19:23:27.202833",
+      "Value": 0.0004799365997314453,
+      "Unit": "Seconds"
+    }
+  ]
+}

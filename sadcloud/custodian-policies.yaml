@@ -16,7 +16,7 @@ policies:
         violation_desc: "S3 bucket had global grants which have been removed."
         action_desc: "Cloud Custodian automatically enforced bucket privacy by removing public access."
         to:
-          - https://hooks.slack.com/services/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
+          - https://hooks.slack.com/services/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
         transport:
           type: sqs
           queue: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue
@@ -40,7 +40,7 @@ policies:
         violation_desc: "S3 bucket had public access blocks disabled. They have now been enabled."
         action_desc: "Cloud Custodian automatically enabled public access blocks."
         to:
-          - https://hooks.slack.com/services/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
+          - https://hooks.slack.com/services/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
         transport:
           type: sqs
           queue: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue
@@ -64,7 +64,7 @@ policies:
         violation_desc: "S3 bucket had a public access policy which has been removed."
         action_desc: "Cloud Custodian automatically removed the public access policy."
         to:
-          - https://hooks.slack.com/services/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
+          - https://hooks.slack.com/services/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
         transport:
           type: sqs
           queue: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue

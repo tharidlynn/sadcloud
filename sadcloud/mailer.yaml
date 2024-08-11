@@ -1,0 +1,6 @@
+debug: true
+queue_url: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue
+role: arn:aws:iam::123523539192:role/diraht-sadcloud-cloud-custodian-role
+region: us-east-1
+from_address: diamond_dog@cosmic.cloud
+slack_webhook: https://hooks.slack.com/services/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

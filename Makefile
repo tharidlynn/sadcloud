@@ -25,6 +25,46 @@ AWS_REGION="us-east-1"
 SQS_QUEUE_NAME="diraht-sadcloud-cloud-custodian-mailer-queue"
 CUSTODIAN_ROLE_NAME="diraht-sadcloud-cloud-custodian-role"
 
+run-custodian:
+	@echo "Running Cloud Custodian..."
+	@cd $(TF_DIR) && custodian run --output-dir=. custodian-policies.yaml
+	@echo "Cloud Custodian run complete. Check your Slack channel for notifications."
+	
+update-lambda:
+	c7n-mailer --config sadcloud/mailer.yaml --update-lambda
+
+create-custodian-role:
+	@echo "Checking if IAM role $(CUSTODIAN_ROLE_NAME) exists..."
+	@if aws iam get-role --role-name $(CUSTODIAN_ROLE_NAME) >/dev/null 2>&1; then \
+		echo "Role $(CUSTODIAN_ROLE_NAME) already exists. Deleting it..."; \
+		aws iam list-role-policies --role-name $(CUSTODIAN_ROLE_NAME) --query 'PolicyNames[]' --output text | xargs -n 1 aws iam delete-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-name; \
+		aws iam list-attached-role-policies --role-name $(CUSTODIAN_ROLE_NAME) --query 'AttachedPolicies[].PolicyArn' --output text | xargs -n 1 aws iam detach-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-arn; \
+		aws iam delete-role --role-name $(CUSTODIAN_ROLE_NAME); \
+		echo "Waiting for role deletion to complete..."; \
+		sleep 10; \
+	fi
+	@echo "Creating IAM role: $(CUSTODIAN_ROLE_NAME)"
+	@aws iam create-role --role-name $(CUSTODIAN_ROLE_NAME) --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":["lambda.amazonaws.com","events.amazonaws.com"]},"Action":"sts:AssumeRole"}]}'
+	@aws iam attach-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+	@aws iam put-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-name CloudCustodianPolicy --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetBucketLocation\",\"s3:ListAllMyBuckets\",\"s3:ListBucket\",\"s3:GetBucketPolicy\",\"s3:GetBucketAcl\",\"s3:PutBucketAcl\",\"s3:PutBucketPolicy\",\"s3:DeleteBucketPolicy\",\"s3:PutBucketPublicAccessBlock\"],\"Resource\":\"*\"},{\"Effect\":\"Allow\",\"Action\":[\"sqs:*\"],\"Resource\":\"*\"},{\"Effect\":\"Allow\",\"Action\":[\"sns:Publish\"],\"Resource\":\"*\"},{\"Effect\":\"Allow\",\"Action\":[\"lambda:GetFunction\",\"lambda:ListFunctions\",\"lambda:GetPolicy\"],\"Resource\":\"*\"},{\"Effect\":\"Allow\",\"Action\":[\"logs:CreateLogGroup\",\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Resource\":\"arn:aws:logs:*:*:*\"},{\"Effect\":\"Allow\",\"Action\":[\"iam:PassRole\"],\"Resource\":\"arn:aws:iam::*:role/$(CUSTODIAN_ROLE_NAME)\"}]}"
+	@echo "IAM role $(CUSTODIAN_ROLE_NAME) created with necessary permissions"
+
+
+test-custodian:
+	@echo "Testing Cloud Custodian policies"
+	@echo "Making $(S3_TERRACOST_BUCKET_NAME) bucket public..."
+	@aws s3api put-public-access-block --bucket $(S3_TERRACOST_BUCKET_NAME) --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
+	@echo '{"Version":"2012-10-17","Statement":[{"Sid":"PublicRead","Effect":"Allow","Principal":"*","Action":["s3:GetObject","s3:ListBucket"],"Resource":["arn:aws:s3:::diraht-sadcloud-terracost","arn:aws:s3:::diraht-sadcloud-terracost/*"]}]}' > /tmp/public-policy.json
+	@aws s3api put-bucket-policy --bucket $(S3_TERRACOST_BUCKET_NAME) --policy file:///tmp/public-policy.json
+	@echo "Running Cloud Custodian..."
+	@cd $(TF_DIR) && custodian run --output-dir=. custodian-policies.yaml
+	@echo "Checking if Cloud Custodian corrected the public access..."
+	@aws s3api get-public-access-block --bucket $(S3_TERRACOST_BUCKET_NAME)
+	@echo "Checking if Cloud Custodian removed the public policy..."
+	@aws s3api get-bucket-policy --bucket $(S3_TERRACOST_BUCKET_NAME) || echo "Bucket policy removed successfully"
+	@echo "Test complete. Check your Slack channel for notifications."
+	@rm -f /tmp/public-policy.json
+
 create-backend-bucket:
 	@echo "Creating S3 bucket: $(S3_TERRAFORM_BACKEND_BUCKET_NAME)"
 	@aws s3api create-bucket --bucket $(S3_TERRAFORM_BACKEND_BUCKET_NAME) --region $(AWS_REGION)
@@ -40,29 +80,6 @@ create-terracost-bucket:
 create-sqs-queue:
 	@echo "Creating SQS queue: $(SQS_QUEUE_NAME)"
 	@aws sqs create-queue --queue-name $(SQS_QUEUE_NAME) --region $(AWS_REGION)
-
-create-custodian-role:
-	@echo "Creating IAM role: $(CUSTODIAN_ROLE_NAME)"
-	@aws iam create-role --role-name $(CUSTODIAN_ROLE_NAME) --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-	@aws iam attach-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-	@aws iam put-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-name CloudCustodianMailerPolicy --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["sqs:*"],"Resource":"*"},{"Effect":"Allow","Action":["sns:Publish"],"Resource":"*"}]}'
-
-setup-c7n-mailer:
-	@echo "Setting up c7n-mailer"
-	@if [ -z "$(from_email)" ] || [ -z "$(slack_webhook)" ]; then \
-		echo "Error: from_email and slack_webhook are required. Usage: make setup-c7n-mailer from_email=your_email slack_webhook=your_webhook_url"; \
-		exit 1; \
-	fi
-	@echo "queue_url: https://sqs.$(AWS_REGION).amazonaws.com/$(shell aws sts get-caller-identity --query Account --output text)/$(SQS_QUEUE_NAME)" > mailer.yaml
-	@echo "role: arn:aws:iam::$(shell aws sts get-caller-identity --query Account --output text):role/$(CUSTODIAN_ROLE_NAME)" >> mailer.yaml
-	@echo "region: $(AWS_REGION)" >> mailer.yaml
-	@echo "from_address: $(from_email)" >> mailer.yaml
-	@echo "slack_webhook: $(slack_webhook)" >> mailer.yaml
-	@c7n-mailer --config mailer.yaml --update-lambda
-
-install-c7n-mailer:
-	@echo "Installing c7n-mailer"
-	@pip install c7n-mailer
 
 create-custodian-resources: create-sqs-queue create-custodian-role create-cloud-custodian-bucket
 

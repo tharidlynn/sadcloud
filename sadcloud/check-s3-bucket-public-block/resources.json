@@ -1,0 +1,39 @@
+[
+  {
+    "Name": "diraht-sadcloud-terracost",
+    "CreationDate": "2024-08-11T10:29:42+00:00",
+    "Location": {
+      "LocationConstraint": null
+    },
+    "Tags": [],
+    "Policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"PublicRead\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":[\"s3:GetObject\",\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::diraht-sadcloud-terracost\",\"arn:aws:s3:::diraht-sadcloud-terracost/*\"]}]}",
+    "Acl": {
+      "Owner": {
+        "DisplayName": "tharidlynn",
+        "ID": "7b7ab4d0231b970ac63f226a6413f5998005752efa1cddbdd8dbc521ff7167f0"
+      },
+      "Grants": [
+        {
+          "Grantee": {
+            "DisplayName": "tharidlynn",
+            "ID": "7b7ab4d0231b970ac63f226a6413f5998005752efa1cddbdd8dbc521ff7167f0",
+            "Type": "CanonicalUser"
+          },
+          "Permission": "FULL_CONTROL"
+        }
+      ]
+    },
+    "Replication": null,
+    "Versioning": {},
+    "Website": null,
+    "Logging": {},
+    "Notification": {},
+    "Lifecycle": null,
+    "c7n:PublicAccessBlock": {
+      "BlockPublicAcls": false,
+      "IgnorePublicAcls": false,
+      "BlockPublicPolicy": false,
+      "RestrictPublicBuckets": false
+    }
+  }
+]

@@ -1,0 +1,7 @@
+2024-08-11 18:41:11,977 - custodian.policy - INFO - policy:check-s3-bucket-policy resource:s3 region:us-east-1 count:0 time:0.00
+2024-08-11 18:48:53,612 - custodian.policy - INFO - policy:check-s3-bucket-policy resource:s3 region:us-east-1 count:0 time:0.00
+2024-08-11 19:04:20,713 - custodian.policy - INFO - policy:check-s3-bucket-policy resource:s3 region:us-east-1 count:0 time:0.00
+2024-08-11 19:15:23,034 - custodian.policy - INFO - policy:check-s3-bucket-policy resource:s3 region:us-east-1 count:0 time:0.00
+2024-08-11 19:17:34,089 - custodian.policy - INFO - policy:check-s3-bucket-policy resource:s3 region:us-east-1 count:0 time:0.00
+2024-08-11 19:23:06,819 - custodian.policy - INFO - policy:check-s3-bucket-policy resource:s3 region:us-east-1 count:0 time:0.00
+2024-08-11 19:23:27,202 - custodian.policy - INFO - policy:check-s3-bucket-policy resource:s3 region:us-east-1 count:0 time:0.00
