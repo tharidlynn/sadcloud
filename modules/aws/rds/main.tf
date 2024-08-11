@@ -7,8 +7,9 @@ resource "aws_db_subnet_group" "default" {
 resource "aws_db_instance" "main" {
   allocated_storage   = 20
   storage_type        = "gp2"
-  engine              = "mysql"
-  instance_class      = "db.t2.micro"
+  engine              = "mysql"       # Ensure the engine is set
+  engine_version      = "8.0.33"      # Use a supported engine version
+  instance_class      = "db.t3.micro" # Use a compatible instance class
   username            = "foo"
   password            = "foobarbaz"
   skip_final_snapshot = true

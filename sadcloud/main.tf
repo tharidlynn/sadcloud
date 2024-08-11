@@ -9,18 +9,18 @@ module "network" {
 
 ############## SERVICES ##############
 
-module "acm" {
-  source = "../modules/aws/acm"
+# module "acm" {
+#   source = "../modules/aws/acm"
 
-  certificate_transparency_disabled = false || var.all_acm_findings || var.all_findings
-}
+#   certificate_transparency_disabled = false || var.all_acm_findings || var.all_findings
+# }
 
-module "cloudformation" {
-  source = "../modules/aws/cloudformation"
+# module "cloudformation" {
+#   source = "../modules/aws/cloudformation"
 
-  stack_with_role          = false || var.all_cloudformation_findings || var.all_findings
-  stack_with_secret_output = false || var.all_cloudformation_findings || var.all_findings
-}
+#   stack_with_role          = false || var.all_cloudformation_findings || var.all_findings
+#   stack_with_secret_output = false || var.all_cloudformation_findings || var.all_findings
+# }
 
 module "cloudtrail" {
   source = "../modules/aws/cloudtrail"
@@ -85,18 +85,18 @@ module "ecr" {
   ecr_repo_public       = false || var.all_ecr_findings || var.all_findings
 }
 
-module "eks" {
-  source = "../modules/aws/eks"
+# module "eks" {
+#   source = "../modules/aws/eks"
 
-  main_subnet_id      = module.network.main_subnet_id
-  secondary_subnet_id = module.network.secondary_subnet_id
-  vpc_id              = module.network.vpc_id
+#   main_subnet_id      = module.network.main_subnet_id
+#   secondary_subnet_id = module.network.secondary_subnet_id
+#   vpc_id              = module.network.vpc_id
 
-  out_of_date         = false || var.all_eks_findings || var.all_findings
-  no_logs             = false || var.all_eks_findings || var.all_findings
-  publicly_accessible = false || var.all_eks_findings || var.all_findings
-  globally_accessible = false || var.all_eks_findings || var.all_findings
-}
+#   out_of_date         = false || var.all_eks_findings || var.all_findings
+#   no_logs             = false || var.all_eks_findings || var.all_findings
+#   publicly_accessible = false || var.all_eks_findings || var.all_findings
+#   globally_accessible = false || var.all_eks_findings || var.all_findings
+# }
 
 # module "elasticsearch" {
 #   source = "../modules/aws/elasticsearch"

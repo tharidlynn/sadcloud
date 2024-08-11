@@ -1,0 +1,77 @@
+name: Terraform CI with TerraCost
+
+on:
+  workflow_dispatch:
+    inputs:
+      trigger_by_app:
+        description: "Triggered by app"
+        required: false
+        default: "false"
+
+env:
+  TF_WORKING_DIR: "sadcloud"
+  S3_TERRACOST_BUCKET_NAME: "diraht-sadcloud-terracost"
+  AWS_REGION: "us-east-1"
+
+jobs:
+  terracost:
+    name: "TerraCost Estimation"
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Generate Unique ID and Timestamp
+        id: vars
+        run: |
+          echo "GITHUB_RUN_ID=${{ github.run_id }}" >> $GITHUB_ENV
+          echo "UNIQUE_ID=$(uuidgen)" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")" >> $GITHUB_ENV
+          echo "S3_PATH=terraform-cost-estimates/$GITHUB_RUN_ID-$UNIQUE_ID-$TIMESTAMP" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set up MySQL for TerraCost
+        run: |
+          docker run  -p 3306:3306 -d --privileged  -e MYSQL_ROOT_PASSWORD=terracost  mysql:8.0.34 --default-authentication-plugin=mysql_native_password
+          sleep 20
+          mysql -h 127.0.0.1 -uroot -pterracost -e "CREATE DATABASE terracost_test"
+
+      - name: Ingest AWS Pricing Data
+        run: go run terracost.go -ingest-aws -minimal
+
+      - name: Convert Plan to JSON
+        run: terraform show -json tfplan > terraform-plan.json
+
+      - name: Estimate Terraform Cost
+        run: go run terracost.go -estimate-plan ./terraform-plan.json > cost-estimate.json
+
+      - name: Prepare Metadata
+        run: |
+          echo "{" > metadata.json
+          echo "\"unique_id\": \"${{ env.UNIQUE_ID }}\"," >> metadata.json
+          echo "\"timestamp\": \"${{ env.TIMESTAMP }}\"," >> metadata.json
+          echo "\"github_run_id\": \"${{ env.GITHUB_RUN_ID }}\"," >> metadata.json
+          echo "\"trigger_by_app\": \"${{ github.event.inputs.trigger_by_app }}\"" >> metadata.json
+          echo "}" >> metadata.json
+
+      - name: Upload Cost Estimate and Metadata to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws s3 cp cost-estimate.json s3://${{ env.S3_TERRACOST_BUCKET_NAME }}/${{ env.S3_PATH }}/cost-estimate.json
+          aws s3 cp metadata.json s3://${{ env.S3_TERRACOST_BUCKET_NAME }}/${{ env.S3_PATH }}/metadata.json
+
+      - name: Output S3 Path
+        run: echo s3://${{ env.S3_TERRACOST_BUCKET_NAME }}/${{ env.S3_PATH }}

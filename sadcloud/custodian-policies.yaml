@@ -1,0 +1,47 @@
+policies:
+  - name: enforce-s3-bucket-privacy
+    resource: s3
+    description: |
+      Ensure that no S3 buckets are publicly accessible. This policy
+      will identify any bucket that has public access and remove the
+      public access by updating the bucket's ACL and bucket policy.
+    filters:
+      - or:
+          - "Acl.Grants":
+              - Grantee.URI: "http://acs.amazonaws.com/groups/global/AllUsers"
+              - Grantee.URI: "http://acs.amazonaws.com/groups/global/AuthenticatedUsers"
+          - type: "check-public-block"
+            BlockPublicAcls: false
+            BlockPublicPolicy: false
+          - type: "bucket-policy"
+            statement:
+              - Effect: "Allow"
+                Principal: "*"
+                Action: "s3:*"
+                Condition:
+                  StringEquals:
+                    aws:PrincipalType: "IAMUser"
+    actions:
+      - type: "set-public-block"
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      - type: "remove-statements"
+        statement_ids:
+          - "PublicAccess"
+      - type: "notify"
+        template: default
+        subject: "S3 Bucket Privacy Alert: Bucket Made Private"
+        violation_desc: "The following S3 bucket was found to be publicly accessible and has had public access removed."
+        action_desc: "Cloud Custodian automatically enforced bucket privacy by removing public access."
+        transport:
+          type: "slack"
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        to:
+          - slack
+        message: |
+          *Bucket Name:* {{ resource.name }}
+          *Account:* {{ account }}
+          *Region:* {{ region }}
+          *Event:* S3 bucket privacy enforcement by Cloud Custodian

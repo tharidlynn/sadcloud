@@ -1,0 +1,79 @@
+name: PR Terraform Plan
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+    paths:
+      - 'environments/**'
+
+env:
+  PROJECT_ID: 'foobar-9989'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/230157565750/locations/global/workloadIdentityPools/foobar-github-pool-dev/providers/foobar-gh-provider-dev'
+  SERVICE_ACCOUNT: 'github-actions-sa-dev@foobar-9989.iam.gserviceaccount.com'
+
+jobs:
+  terraform-plan:
+    name: 'Terraform Plan'
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+      pull-requests: 'write'
+    runs-on: ubuntu-24.04
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud from GitHub Actions
+      uses: 'google-github-actions/auth@v2'
+      with:
+        project_id: ${{ env.PROJECT_ID }}
+        workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ env.SERVICE_ACCOUNT }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.8.0
+
+    - name: Determine Environment
+      id: determine_env
+      run: |
+        if [[ "${{ github.base_ref }}" == "develop" ]]; then
+          echo "environment=dev" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.base_ref }}" == "main" ]]; then
+          echo "environment=staging" >> $GITHUB_OUTPUT
+        else
+          echo "Unsupported base branch"
+          exit 1
+        fi
+
+    - name: Terraform Init
+      run: terraform init
+      working-directory: environments/${{ steps.determine_env.outputs.environment }}
+
+    - name: Terraform Plan
+      run: terraform plan -no-color -out=tfplan
+      working-directory: environments/${{ steps.determine_env.outputs.environment }}
+
+    - name: Terraform Show
+      id: show
+      run: terraform show -no-color tfplan > tfplan.txt
+      working-directory: environments/${{ steps.determine_env.outputs.environment }}
+
+    - name: Comment Plan
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const planOutput = fs.readFileSync('environments/${{ steps.determine_env.outputs.environment }}/tfplan.txt', 'utf8');
+          const truncatedPlan = planOutput.length > 65000 
+            ? planOutput.substring(0, 65000) + "\n\n... (Plan was truncated due to length)"
+            : planOutput;
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '## Terraform Plan\n\n```hcl\n' + truncatedPlan + '\n```'
+          })
