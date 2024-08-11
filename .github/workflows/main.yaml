@@ -73,19 +73,21 @@ jobs:
           pip install c7n c7n-mailer
 
       - name: Update c7n-mailer Lambda
-        run: c7n-mailer --config mailer.yaml --update-lambda
+        run: c7n-mailer --config ${{ env.TF_WORKING_DIR }}/mailer.yaml --update-lambda
 
       - name: Run Cloud Custodian Policies
         run: |
-          cd "${{ env.TF_WORKING_DIR }}"
-          custodian run -s . custodian-policies.yaml
+          cd "${{ env.TF_WORKING_DIR }}/sadcloud"
+          OUTPUT_DIR="custodian-output-$(date +%Y-%m-%d_%H-%M-%S)"
+          custodian run -s $OUTPUT_DIR custodian-policies.yaml
 
       - name: Upload Custodian Logs to S3
         if: always()
         run: |
-          cd "${{ env.TF_WORKING_DIR }}"
-          if [ -d "output" ]; then
-            aws s3 cp output s3://${{ env.S3_CLOUD_CUSTODIAN_BUCKET_NAME }}/custodian-logs/$(date +%Y-%m-%d)/ --recursive
+          cd "${{ env.TF_WORKING_DIR }}/sadcloud"
+          OUTPUT_DIR=$(ls -td custodian-output-* | head -1)
+          if [ -d "$OUTPUT_DIR" ]; then
+            aws s3 cp "$OUTPUT_DIR" s3://${{ env.S3_CLOUD_CUSTODIAN_BUCKET_NAME }}/custodian-logs/$(date +%Y-%m-%d)/ --recursive
           else
             echo "No Cloud Custodian output directory found"
           fi

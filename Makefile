@@ -27,9 +27,12 @@ CUSTODIAN_ROLE_NAME="diraht-sadcloud-cloud-custodian-role"
 
 run-custodian:
 	@echo "Running Cloud Custodian..."
-	@cd $(TF_DIR) && custodian run --output-dir=. custodian-policies.yaml
-	@echo "Cloud Custodian run complete. Check your Slack channel for notifications."
-	
+	@cd $(TF_DIR) && \
+	OUTPUT_DIR="custodian-output-$(shell date +%Y-%m-%d_%H-%M-%S)" && \
+	mkdir -p $$OUTPUT_DIR && \
+	custodian run --output-dir=$$OUTPUT_DIR custodian-policies.yaml
+	@echo "Cloud Custodian run complete. Output saved in $$OUTPUT_DIR. Check your Slack channel for notifications."
+
 update-lambda:
 	c7n-mailer --config sadcloud/mailer.yaml --update-lambda
 
