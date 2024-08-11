@@ -111,17 +111,17 @@ module "elb" {
   no_access_logs = false || var.all_elb_findings || var.all_findings
 }
 
-module "elbv2" {
-  source = "../modules/aws/elbv2"
+# module "elbv2" {
+#   source = "../modules/aws/elbv2"
 
-  main_subnet_id      = module.network.main_subnet_id
-  secondary_subnet_id = module.network.secondary_subnet_id
-  vpc_id              = module.network.vpc_id
+#   main_subnet_id      = module.network.main_subnet_id
+#   secondary_subnet_id = module.network.secondary_subnet_id
+#   vpc_id              = module.network.vpc_id
 
-  no_access_logs         = false || var.all_elbv2_findings || var.all_findings
-  no_deletion_protection = false || var.all_elbv2_findings || var.all_findings
-  older_ssl_policy       = false || var.all_elbv2_findings || var.all_findings
-}
+#   no_access_logs         = false || var.all_elbv2_findings || var.all_findings
+#   no_deletion_protection = false || var.all_elbv2_findings || var.all_findings
+#   older_ssl_policy       = false || var.all_elbv2_findings || var.all_findings
+# }
 
 module "glacier" {
   source = "../modules/aws/glacier"
