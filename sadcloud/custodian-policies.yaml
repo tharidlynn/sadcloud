@@ -7,41 +7,35 @@ policies:
       public access by updating the bucket's ACL and bucket policy.
     filters:
       - or:
-          - "Acl.Grants":
-              - Grantee.URI: "http://acs.amazonaws.com/groups/global/AllUsers"
-              - Grantee.URI: "http://acs.amazonaws.com/groups/global/AuthenticatedUsers"
-          - type: "check-public-block"
+          - type: global-grants
+          - type: check-public-block
             BlockPublicAcls: false
             BlockPublicPolicy: false
-          - type: "bucket-policy"
-            statement:
-              - Effect: "Allow"
-                Principal: "*"
-                Action: "s3:*"
-                Condition:
-                  StringEquals:
-                    aws:PrincipalType: "IAMUser"
+          - type: bucket-policy
+            key: Statement
+            op: contains
+            value:
+              Effect: Allow
+              Principal: "*"
+              Action: "s3:*"
     actions:
-      - type: "set-public-block"
+      - type: set-public-block
         BlockPublicAcls: true
         IgnorePublicAcls: true
         BlockPublicPolicy: true
         RestrictPublicBuckets: true
-      - type: "remove-statements"
+      - type: remove-statements
         statement_ids:
-          - "PublicAccess"
-      - type: "notify"
-        template: default
-        subject: "S3 Bucket Privacy Alert: Bucket Made Private"
-        violation_desc: "The following S3 bucket was found to be publicly accessible and has had public access removed."
-        action_desc: "Cloud Custodian automatically enforced bucket privacy by removing public access."
-        transport:
-          type: "slack"
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          - PublicAccess
+      - type: notify
         to:
           - slack
+        transport:
+          type: slack
+          url: "https://hooks.slack.com/services/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"
+        subject: "S3 Bucket Privacy Alert: Bucket Made Private"
         message: |
-          *Bucket Name:* {{ resource.name }}
-          *Account:* {{ account }}
-          *Region:* {{ region }}
-          *Event:* S3 bucket privacy enforcement by Cloud Custodian
+          S3 bucket {resource[BucketName]} in account {account_id} 
+          was found to be publicly accessible and has had public access removed.
+
+          Cloud Custodian automatically enforced bucket privacy by removing public access.
