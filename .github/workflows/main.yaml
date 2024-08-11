@@ -77,14 +77,14 @@ jobs:
 
       - name: Run Cloud Custodian Policies
         run: |
-          cd "${{ env.TF_WORKING_DIR }}/sadcloud"
+          cd "${{ env.TF_WORKING_DIR }}"
           OUTPUT_DIR="custodian-output-$(date +%Y-%m-%d_%H-%M-%S)"
           custodian run -s $OUTPUT_DIR custodian-policies.yaml
 
       - name: Upload Custodian Logs to S3
         if: always()
         run: |
-          cd "${{ env.TF_WORKING_DIR }}/sadcloud"
+          cd "${{ env.TF_WORKING_DIR }}"
           OUTPUT_DIR=$(ls -td custodian-output-* | head -1)
           if [ -d "$OUTPUT_DIR" ]; then
             aws s3 cp "$OUTPUT_DIR" s3://${{ env.S3_CLOUD_CUSTODIAN_BUCKET_NAME }}/custodian-logs/$(date +%Y-%m-%d)/ --recursive
