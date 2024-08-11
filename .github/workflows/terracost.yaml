@@ -41,10 +41,10 @@ jobs:
           echo "S3_PATH=terraform-cost-estimates/$GITHUB_RUN_ID-$UNIQUE_ID-$TIMESTAMP" >> $GITHUB_ENV
         shell: bash
 
-       - name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.18'  # or whichever version TerraCost requires
+          go-version: "1.18" # or whichever version TerraCost requires
 
       - name: Install TerraCost
         run: |
