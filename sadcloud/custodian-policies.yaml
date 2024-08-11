@@ -1,29 +1,60 @@
 policies:
-  - name: enforce-s3-bucket-privacy
+  - name: check-s3-bucket-global-grants
     resource: s3
-    description: |
-      Ensure that no S3 buckets are publicly accessible. This policy
-      will identify any bucket that has public access and remove the
-      public access by updating the bucket's ACL and bucket policy.
+    description: Check for S3 buckets with global grants
     filters:
-      - or:
-          - type: global-grants
-          - type: check-public-block
-            BlockPublicAcls: false
-            BlockPublicPolicy: false
-          - type: bucket-policy
-            key: Statement
-            op: contains
-            value:
-              Effect: Allow
-              Principal: "*"
-              Action: "s3:*"
+      - type: global-grants
     actions:
       - type: set-public-block
         BlockPublicAcls: true
         IgnorePublicAcls: true
         BlockPublicPolicy: true
         RestrictPublicBuckets: true
+      - type: notify
+        to:
+          - slack
+        transport:
+          type: slack
+          url: ${SLACK_WEBHOOK_URL}
+        subject: "S3 Bucket Privacy Alert: Global Grants Removed"
+        message: |
+          S3 bucket {resource[BucketName]} in account {account_id} 
+          had global grants which have been removed.
+
+  - name: check-s3-bucket-public-block
+    resource: s3
+    description: Check for S3 buckets without proper public access blocks
+    filters:
+      - type: check-public-block
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+    actions:
+      - type: set-public-block
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      - type: notify
+        to:
+          - slack
+        transport:
+          type: slack
+          url: ${SLACK_WEBHOOK_URL}
+        subject: "S3 Bucket Privacy Alert: Public Access Block Enabled"
+        message: |
+          S3 bucket {resource[BucketName]} in account {account_id} 
+          had public access blocks disabled. They have now been enabled.
+
+  - name: check-s3-bucket-policy
+    resource: s3
+    description: Check for S3 buckets with public access in their policy
+    filters:
+      - type: has-statement
+        statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: "s3:*"
+    actions:
       - type: remove-statements
         statement_ids:
           - PublicAccess
@@ -32,10 +63,8 @@ policies:
           - slack
         transport:
           type: slack
-          url: "https://hooks.slack.com/services/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"
-        subject: "S3 Bucket Privacy Alert: Bucket Made Private"
+          url: ${SLACK_WEBHOOK_URL}
+        subject: "S3 Bucket Privacy Alert: Public Policy Removed"
         message: |
           S3 bucket {resource[BucketName]} in account {account_id} 
-          was found to be publicly accessible and has had public access removed.
-
-          Cloud Custodian automatically enforced bucket privacy by removing public access.
+          had a public access policy which has been removed.
