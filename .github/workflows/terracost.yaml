@@ -41,20 +41,24 @@ jobs:
           echo "S3_PATH=terraform-cost-estimates/$GITHUB_RUN_ID-$UNIQUE_ID-$TIMESTAMP" >> $GITHUB_ENV
         shell: bash
 
-      - name: Set up MySQL for TerraCost
+       - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.18'  # or whichever version TerraCost requires
+
+      - name: Install TerraCost
         run: |
-          docker run  -p 3306:3306 -d --privileged  -e MYSQL_ROOT_PASSWORD=terracost  mysql:8.0.34 --default-authentication-plugin=mysql_native_password
-          sleep 20
-          mysql -h 127.0.0.1 -uroot -pterracost -e "CREATE DATABASE terracost_test"
+          go install github.com/cycloidio/terracost/cmd/terracost@latest
+          terracost version  # verify installation
 
       - name: Ingest AWS Pricing Data
-        run: go run terracost.go -ingest-aws -minimal
+        run: terracost -ingest-aws -minimal
 
       - name: Convert Plan to JSON
         run: terraform show -json tfplan > terraform-plan.json
 
       - name: Estimate Terraform Cost
-        run: go run terracost.go -estimate-plan ./terraform-plan.json > cost-estimate.json
+        run: terracost -estimate-plan ./terraform-plan.json > cost-estimate.json
 
       - name: Prepare Metadata
         run: |
