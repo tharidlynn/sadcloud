@@ -86,7 +86,12 @@ jobs:
           cd "${{ env.TF_WORKING_DIR }}"
           custodian run -s . custodian-policies.yaml
 
-      - name: Upload Custodian Logs to S3 (Optional)
+      - name: Upload Custodian Logs to S3
         if: always()
         run: |
-          aws s3 cp . s3://${{ env.S3_CLOUD_CUSTODIAN_BUCKET_NAME }}/custodian-logs/ --recursive
+          cd "${{ env.TF_WORKING_DIR }}"
+          if [ -d "output" ]; then
+            aws s3 cp output s3://${{ env.S3_CLOUD_CUSTODIAN_BUCKET_NAME }}/custodian-logs/$(date +%Y-%m-%d)/ --recursive
+          else
+            echo "No Cloud Custodian output directory found"
+          fi
