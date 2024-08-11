@@ -59,7 +59,7 @@ jobs:
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -var="all_findings=true" tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Set up Python
