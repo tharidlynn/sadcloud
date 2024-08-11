@@ -19,9 +19,6 @@ jobs:
     permissions:
       contents: "read"
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: ${{ env.TF_WORKING_DIR }}
 
     steps:
       - name: Checkout code
@@ -39,21 +36,31 @@ jobs:
         with:
           terraform_version: "1.8.0"
 
+      - name: Debug working directory
+        run: |
+          pwd
+          ls -la
+
       - name: Terraform Format
         run: terraform fmt -check
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Init
         run: terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Validate
         run: terraform validate -no-color
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Plan
         run: terraform plan -no-color -out=tfplan
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -65,8 +72,25 @@ jobs:
 
       - name: Run Cloud Custodian Policies
         run: |
-          cd ${{ env.TF_WORKING_DIR }}
-          custodian run -s . custodian-policies.yaml
+          echo "Current directory: $(pwd)"
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of TF_WORKING_DIR: ${{ env.TF_WORKING_DIR }}"
+          if [ -d "${{ env.TF_WORKING_DIR }}" ]; then
+            cd "${{ env.TF_WORKING_DIR }}"
+            echo "Changed to ${{ env.TF_WORKING_DIR }}"
+            echo "Contents of ${{ env.TF_WORKING_DIR }}:"
+            ls -la
+            if [ -f "custodian-policies.yaml" ]; then
+              custodian run -s . custodian-policies.yaml
+            else
+              echo "custodian-policies.yaml not found in ${{ env.TF_WORKING_DIR }}"
+              exit 1
+            fi
+          else
+            echo "Directory ${{ env.TF_WORKING_DIR }} not found"
+            exit 1
+          fi
 
       - name: Upload Custodian Logs to S3 (Optional)
         if: always()
