@@ -69,7 +69,8 @@ jobs:
         run: pip install c7n
 
       - name: Run Cloud Custodian Policies
-        run: custodian run -s . ${TF_WORKING_DIR}/custodian-policies.yaml
+        run: cd ${{ env.TF_WORKING_DIR }}
+          custodian run -s . custodian-policies.yaml
 
       - name: Upload Custodian Logs to S3 (Optional)
         if: always()
