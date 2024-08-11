@@ -67,8 +67,10 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install Cloud Custodian and c7n-mailer
-        run: pip install c7n c7n-mailer
+      - name: Install Cloud Custodian, c7n-mailer, and dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install c7n c7n-mailer
 
       - name: Set up c7n-mailer config
         run: |
