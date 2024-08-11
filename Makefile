@@ -21,6 +21,10 @@ S3_TERRACOST_BUCKET_NAME="diraht-sadcloud-terracost"
 
 AWS_REGION="us-east-1"
 
+
+SQS_QUEUE_NAME="diraht-sadcloud-cloud-custodian-mailer-queue"
+CUSTODIAN_ROLE_NAME="diraht-sadcloud-cloud-custodian-role"
+
 create-backend-bucket:
 	@echo "Creating S3 bucket: $(S3_TERRAFORM_BACKEND_BUCKET_NAME)"
 	@aws s3api create-bucket --bucket $(S3_TERRAFORM_BACKEND_BUCKET_NAME) --region $(AWS_REGION)
@@ -32,6 +36,37 @@ create-cloud-custodian-bucket:
 create-terracost-bucket:
 	@echo "Creating S3 bucket: $(S3_TERRACOST_BUCKET_NAME)"
 	@aws s3api create-bucket --bucket $(S3_TERRACOST_BUCKET_NAME) --region $(AWS_REGION)
+
+create-sqs-queue:
+	@echo "Creating SQS queue: $(SQS_QUEUE_NAME)"
+	@aws sqs create-queue --queue-name $(SQS_QUEUE_NAME) --region $(AWS_REGION)
+
+create-custodian-role:
+	@echo "Creating IAM role: $(CUSTODIAN_ROLE_NAME)"
+	@aws iam create-role --role-name $(CUSTODIAN_ROLE_NAME) --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+	@aws iam attach-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+	@aws iam put-role-policy --role-name $(CUSTODIAN_ROLE_NAME) --policy-name CloudCustodianMailerPolicy --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["sqs:*"],"Resource":"*"},{"Effect":"Allow","Action":["sns:Publish"],"Resource":"*"}]}'
+
+setup-c7n-mailer:
+	@echo "Setting up c7n-mailer"
+	@if [ -z "$(from_email)" ] || [ -z "$(slack_webhook)" ]; then \
+		echo "Error: from_email and slack_webhook are required. Usage: make setup-c7n-mailer from_email=your_email slack_webhook=your_webhook_url"; \
+		exit 1; \
+	fi
+	@echo "queue_url: https://sqs.$(AWS_REGION).amazonaws.com/$(shell aws sts get-caller-identity --query Account --output text)/$(SQS_QUEUE_NAME)" > mailer.yaml
+	@echo "role: arn:aws:iam::$(shell aws sts get-caller-identity --query Account --output text):role/$(CUSTODIAN_ROLE_NAME)" >> mailer.yaml
+	@echo "region: $(AWS_REGION)" >> mailer.yaml
+	@echo "from_address: $(from_email)" >> mailer.yaml
+	@echo "slack_webhook: $(slack_webhook)" >> mailer.yaml
+	@c7n-mailer --config mailer.yaml --update-lambda
+
+install-c7n-mailer:
+	@echo "Installing c7n-mailer"
+	@pip install c7n-mailer
+
+create-custodian-resources: create-sqs-queue create-custodian-role create-cloud-custodian-bucket
+
+setup-custodian: install-c7n-mailer create-custodian-resources setup-c7n-mailer
 
 set-env:
 	@if [ -z "$(secret_id)" ]; then \

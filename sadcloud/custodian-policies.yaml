@@ -11,15 +11,15 @@ policies:
         BlockPublicPolicy: true
         RestrictPublicBuckets: true
       - type: notify
+        slack_template: slack_default
+        slack_msg_color: danger
+        violation_desc: "S3 bucket had global grants which have been removed."
+        action_desc: "Cloud Custodian automatically enforced bucket privacy by removing public access."
         to:
-          - slack
+          - https://hooks.slack.com/services/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
         transport:
-          type: slack
-          url: ${SLACK_WEBHOOK_URL}
-        subject: "S3 Bucket Privacy Alert: Global Grants Removed"
-        message: |
-          S3 bucket {resource[BucketName]} in account {account_id} 
-          had global grants which have been removed.
+          type: sqs
+          queue: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue
 
   - name: check-s3-bucket-public-block
     resource: s3
@@ -35,15 +35,15 @@ policies:
         BlockPublicPolicy: true
         RestrictPublicBuckets: true
       - type: notify
+        slack_template: slack_default
+        slack_msg_color: warning
+        violation_desc: "S3 bucket had public access blocks disabled. They have now been enabled."
+        action_desc: "Cloud Custodian automatically enabled public access blocks."
         to:
-          - slack
+          - https://hooks.slack.com/services/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
         transport:
-          type: slack
-          url: ${SLACK_WEBHOOK_URL}
-        subject: "S3 Bucket Privacy Alert: Public Access Block Enabled"
-        message: |
-          S3 bucket {resource[BucketName]} in account {account_id} 
-          had public access blocks disabled. They have now been enabled.
+          type: sqs
+          queue: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue
 
   - name: check-s3-bucket-policy
     resource: s3
@@ -59,12 +59,12 @@ policies:
         statement_ids:
           - PublicAccess
       - type: notify
+        slack_template: slack_default
+        slack_msg_color: warning
+        violation_desc: "S3 bucket had a public access policy which has been removed."
+        action_desc: "Cloud Custodian automatically removed the public access policy."
         to:
-          - slack
+          - https://hooks.slack.com/services/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
         transport:
-          type: slack
-          url: ${SLACK_WEBHOOK_URL}
-        subject: "S3 Bucket Privacy Alert: Public Policy Removed"
-        message: |
-          S3 bucket {resource[BucketName]} in account {account_id} 
-          had a public access policy which has been removed.
+          type: sqs
+          queue: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue

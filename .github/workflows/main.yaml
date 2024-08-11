@@ -15,7 +15,7 @@ env:
 
 jobs:
   terraform:
-    name: "Terraform"
+    name: "Terraform and Cloud Custodian"
     permissions:
       contents: "read"
     runs-on: ubuntu-24.04
@@ -67,37 +67,26 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install Cloud Custodian
-        run: pip install c7n
+      - name: Install Cloud Custodian and c7n-mailer
+        run: pip install c7n c7n-mailer
+
+      - name: Set up c7n-mailer config
+        run: |
+          echo "queue_url: https://sqs.us-east-1.amazonaws.com/123523539192/diraht-sadcloud-cloud-custodian-mailer-queue" > mailer.yaml
+          echo "role: arn:aws:iam::123523539192:role/diraht-sadcloud-cloud-custodian-role" >> mailer.yaml
+          echo "region: us-east-1" >> mailer.yaml
+          echo "from_address: diamond_dog@cosmic.cloud" >> mailer.yaml
+          echo "slack_webhook: https://hooks.slack.com/services/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" >> mailer.yaml
+
+      - name: Update c7n-mailer Lambda
+        run: c7n-mailer --config mailer.yaml --update-lambda
 
       - name: Run Cloud Custodian Policies
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Contents of current directory:"
-          ls -la
-          echo "Contents of TF_WORKING_DIR: ${{ env.TF_WORKING_DIR }}"
-          if [ -d "${{ env.TF_WORKING_DIR }}" ]; then
-            cd "${{ env.TF_WORKING_DIR }}"
-            echo "Changed to ${{ env.TF_WORKING_DIR }}"
-            echo "Contents of ${{ env.TF_WORKING_DIR }}:"
-            ls -la
-            if [ -f "custodian-policies.yaml" ]; then
-              custodian run -s . custodian-policies.yaml
-            else
-              echo "custodian-policies.yaml not found in ${{ env.TF_WORKING_DIR }}"
-              exit 1
-            fi
-          else
-            echo "Directory ${{ env.TF_WORKING_DIR }} not found"
-            exit 1
-          fi
+          cd "${{ env.TF_WORKING_DIR }}"
+          custodian run -s . custodian-policies.yaml
 
       - name: Upload Custodian Logs to S3 (Optional)
         if: always()
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           aws s3 cp . s3://${{ env.S3_CLOUD_CUSTODIAN_BUCKET_NAME }}/custodian-logs/ --recursive
