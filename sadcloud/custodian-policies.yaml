@@ -50,7 +50,7 @@ policies:
     description: Check for S3 buckets with public access in their policy
     filters:
       - type: has-statement
-        statement:
+        statements:
           - Effect: Allow
             Principal: "*"
             Action: "s3:*"
