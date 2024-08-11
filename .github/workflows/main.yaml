@@ -54,12 +54,12 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Plan
-        run: terraform plan -no-color -out=tfplan
+        run: terraform plan -var="all_findings=true" -no-color -out=tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve -var="all_findings=true" tfplan
+        run: terraform apply -auto-approve tfplan
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Set up Python
